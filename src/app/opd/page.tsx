@@ -1,10 +1,12 @@
 // app/opd-booking/page.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { db } from "../../firebaseconfig";
 import { ref, push, onValue, set } from "firebase/database";
 import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface UserData {
   id: string;
@@ -23,7 +25,7 @@ interface DoctorData {
 }
 
 export default function OpdBookingPage() {
-  // Form field states
+  // Form fields
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -40,88 +42,112 @@ export default function OpdBookingPage() {
   const [userSuggestions, setUserSuggestions] = useState<UserData[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  // --- Speech Recognition Setup ---
+  // --- Voice Recognition Commands ---
+  const commands = useMemo(
+    () => [
+      {
+        command: "name *",
+        callback: (val: string) => {
+          const trimmed = val.trim();
+          setName(trimmed);
+          toast.info(`Name set to: ${trimmed}`);
+        },
+      },
+      {
+        command: "phone *",
+        callback: (val: string) => {
+          const sanitized = val.replace(/\D/g, "").trim();
+          setPhone(sanitized);
+          toast.info(`Phone set to: ${sanitized}`);
+        },
+      },
+      {
+        command: "email *",
+        callback: (val: string) => {
+          const trimmed = val.trim();
+          setEmail(trimmed);
+          toast.info(`Email set to: ${trimmed}`);
+        },
+      },
+      {
+        command: "age *",
+        callback: (val: string) => {
+          const trimmed = val.trim();
+          setAge(trimmed);
+          toast.info(`Age set to: ${trimmed}`);
+        },
+      },
+      {
+        command: "gender *",
+        callback: (val: string) => {
+          const trimmed = val.trim();
+          setGender(trimmed);
+          toast.info(`Gender set to: ${trimmed}`);
+        },
+      },
+      {
+        command: "doctor *",
+        callback: (val: string) => {
+          const normalized = val.trim().toLowerCase();
+          const doc = doctors.find((d) =>
+            d.name.toLowerCase().includes(normalized)
+          );
+          if (doc) {
+            setSelectedDoctor(doc.id);
+            setAmount(doc.charges.toString());
+            toast.info(`Doctor set to: ${doc.name}`);
+          } else {
+            toast.error(`Doctor "${val}" not found.`);
+          }
+        },
+      },
+      {
+        command: "amount *",
+        callback: (val: string) => {
+          const trimmed = val.trim();
+          setAmount(trimmed);
+          toast.info(`Amount set to: ${trimmed}`);
+        },
+      },
+      {
+        command: "payment *",
+        callback: (val: string) => {
+          const trimmed = val.trim();
+          setPaymentMethod(trimmed);
+          toast.info(`Payment method set to: ${trimmed}`);
+        },
+      },
+      {
+        command: "message *",
+        callback: (val: string) => {
+          const trimmed = val.trim();
+          setMessage(trimmed);
+          toast.info("Message set.");
+        },
+      },
+    ],
+    [doctors]
+  );
+
   const {
     transcript,
     listening,
     resetTranscript,
     browserSupportsSpeechRecognition,
-  } = useSpeechRecognition();
+  } = useSpeechRecognition({ commands });
 
-  // Start listening for voice commands
-  const handleStartListening = () => {
-    resetTranscript();
-    SpeechRecognition.startListening({ continuous: true });
-  };
-
-  // Stop listening and process the voice command(s)
-  const handleStopListening = () => {
-    SpeechRecognition.stopListening();
-    processVoiceCommand(transcript);
-    resetTranscript();
-  };
-
-  // Simple parser for voice commands
-  // For example, saying "name mudassir" will update the "name" state to "mudassir"
-  const processVoiceCommand = (command: string) => {
-    if (!command) return;
-    const cmd = command.toLowerCase();
-    console.log("Voice command received:", command);
-
-    // Process the "name" command
-    if (cmd.includes("name")) {
-      const value = command.split(/name/i)[1].trim();
-      if (value) setName(value);
-    }
-    // Process the "phone" command
-    if (cmd.includes("phone")) {
-      const value = command.split(/phone/i)[1].trim();
-      if (value) setPhone(value);
-    }
-    // Process the "email" command
-    if (cmd.includes("email")) {
-      const value = command.split(/email/i)[1].trim();
-      if (value) setEmail(value);
-    }
-    // Process the "age" command
-    if (cmd.includes("age")) {
-      const value = command.split(/age/i)[1].trim();
-      if (value) setAge(value);
-    }
-    // Process the "gender" command
-    if (cmd.includes("gender")) {
-      const value = command.split(/gender/i)[1].trim();
-      if (value) setGender(value.charAt(0).toUpperCase() + value.slice(1));
-    }
-    // Process the "doctor" command
-    if (cmd.includes("doctor")) {
-      const value = command.split(/doctor/i)[1].trim();
-      if (value) {
-        // Try to find a doctor with a matching name (case-insensitive)
-        const doctorFound = doctors.find((doc) =>
-          doc.name.toLowerCase().includes(value.toLowerCase())
-        );
-        if (doctorFound) {
-          setSelectedDoctor(doctorFound.id);
-          setAmount(doctorFound.charges.toString()); // auto-fill amount based on doctor
-        }
+  // Toggle listening for voice commands
+  const toggleListening = () => {
+    if (listening) {
+      SpeechRecognition.stopListening();
+      toast.info("Voice recognition stopped.");
+    } else {
+      if (browserSupportsSpeechRecognition) {
+        SpeechRecognition.startListening({ continuous: true });
+        toast.info("Voice recognition started.");
+      } else {
+        toast.error("Browser does not support speech recognition.");
       }
-    }
-    // Process the "amount" command
-    if (cmd.includes("amount")) {
-      const value = command.split(/amount/i)[1].trim();
-      if (value) setAmount(value);
-    }
-    // Process the "payment" command (for payment method)
-    if (cmd.includes("payment")) {
-      const value = command.split(/payment/i)[1].trim();
-      if (value)
-        setPaymentMethod(value.charAt(0).toUpperCase() + value.slice(1));
-    }
-    // Process the "message" command
-    if (cmd.includes("message")) {
-      const value = command.split(/message/i)[1].trim();
-      if (value) setMessage(value);
     }
   };
 
@@ -167,7 +193,7 @@ export default function OpdBookingPage() {
     return () => unsubscribeUsers();
   }, []);
 
-  // --- Auto-update Amount when a Doctor is Selected ---
+  // --- Auto-update Amount when Doctor is Selected ---
   useEffect(() => {
     if (selectedDoctor) {
       const doc = doctors.find((d) => d.id === selectedDoctor);
@@ -177,13 +203,12 @@ export default function OpdBookingPage() {
     }
   }, [selectedDoctor, doctors]);
 
-  // --- Handle Customer Name Changes & Suggestions ---
+  // --- Handle Customer Name Change & Suggestions ---
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setName(value);
     // Reset selected user if typing manually
     setSelectedUserId(null);
-
     if (value.length >= 2) {
       const suggestions = existingUsers.filter((user) =>
         user.name.toLowerCase().includes(value.toLowerCase())
@@ -194,7 +219,7 @@ export default function OpdBookingPage() {
     }
   };
 
-  // When a suggestion is clicked, auto-fill the form fields
+  // When a suggestion is clicked, fill in the form fields
   const handleUserSelect = (user: UserData) => {
     setName(user.name);
     setPhone(user.number);
@@ -209,7 +234,6 @@ export default function OpdBookingPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate required fields
     if (
       !name ||
       !phone ||
@@ -223,7 +247,6 @@ export default function OpdBookingPage() {
       return;
     }
 
-    // Find the selected doctor details for auto-filling doctor name
     const selectedDoctorObj = doctors.find((d) => d.id === selectedDoctor);
     const opdData: {
       opdid?: string;
@@ -244,7 +267,6 @@ export default function OpdBookingPage() {
 
     try {
       if (selectedUserId) {
-        // Existing user: Push a new OPD booking under the existing user's node
         const opdRef = ref(db, `user/${selectedUserId}/opd`);
         const newOpdRef = push(opdRef);
         const opdId = newOpdRef.key;
@@ -255,7 +277,6 @@ export default function OpdBookingPage() {
         await set(newOpdRef, opdData);
         alert("OPD booking submitted for existing user!");
       } else {
-        // New user: Create a new user record and push the OPD booking under it
         const usersRef = ref(db, "user");
         const newUserRef = push(usersRef);
         const userId = newUserRef.key;
@@ -287,7 +308,7 @@ export default function OpdBookingPage() {
       if (err instanceof Error) {
         alert("Error submitting booking: " + err.message);
       } else {
-        alert("Error submitting booking");
+        alert("Error submitting booking.");
       }
     }
 
@@ -305,26 +326,32 @@ export default function OpdBookingPage() {
     setUserSuggestions([]);
   };
 
-  if (!browserSupportsSpeechRecognition) {
-    return <span>Your browser does not support speech recognition.</span>;
-  }
-
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <ToastContainer />
       <div className="bg-white rounded-lg shadow-lg max-w-3xl w-full p-8 relative">
-        {/* Voice Booking Controls */}
+        {/* Voice Control Buttons */}
         <div className="mb-4 flex justify-center space-x-4">
           <button
-            onClick={listening ? handleStopListening : handleStartListening}
+            type="button"
+            onClick={toggleListening}
             className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-md transition duration-200"
           >
-            {listening ? "Stop AI" : "Start AI"}
+            {listening ? "Stop Voice Control" : "Start Voice Control"}
           </button>
-          <span className="text-sm text-gray-700">
-            {listening ? "Listening..." : "Not Listening"}
-          </span>
+          <button
+            type="button"
+            onClick={resetTranscript}
+            className="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-md transition duration-200"
+          >
+            Reset Transcript
+          </button>
         </div>
-
+        {/* Display Transcript */}
+        <div className="mb-4 p-4 bg-gray-100 rounded-lg">
+          <h3 className="text-lg font-semibold mb-2">Transcript</h3>
+          <p className="text-gray-700">{transcript}</p>
+        </div>
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
           OPD Booking
         </h2>
@@ -355,7 +382,6 @@ export default function OpdBookingPage() {
               </ul>
             )}
           </div>
-
           {/* Phone & Email */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -383,7 +409,6 @@ export default function OpdBookingPage() {
               />
             </div>
           </div>
-
           {/* Age & Gender */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
@@ -415,7 +440,6 @@ export default function OpdBookingPage() {
               </select>
             </div>
           </div>
-
           {/* Doctor Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700">
@@ -435,7 +459,6 @@ export default function OpdBookingPage() {
               ))}
             </select>
           </div>
-
           {/* Amount (auto-filled when a doctor is selected) */}
           <div>
             <label className="block text-sm font-medium text-gray-700">
@@ -449,7 +472,6 @@ export default function OpdBookingPage() {
               required
             />
           </div>
-
           {/* Payment Method */}
           <div>
             <label className="block text-sm font-medium text-gray-700">
@@ -465,7 +487,6 @@ export default function OpdBookingPage() {
               <option value="Online">Online</option>
             </select>
           </div>
-
           {/* Message */}
           <div>
             <label className="block text-sm font-medium text-gray-700">
@@ -478,7 +499,6 @@ export default function OpdBookingPage() {
               placeholder="Enter a message (optional)"
             ></textarea>
           </div>
-
           {/* Submit Button */}
           <div className="text-center">
             <button
