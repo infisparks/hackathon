@@ -283,8 +283,12 @@ export default function OpdBookingPage() {
         await set(newUserRef, userData);
         alert("New user created and OPD booking submitted!");
       }
-    } catch (err: any) {
-      alert("Error submitting booking: " + err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        alert("Error submitting booking: " + err.message);
+      } else {
+        alert("Error submitting booking");
+      }
     }
 
     // Reset form fields

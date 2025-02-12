@@ -2,13 +2,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+// import { useRouter } from "next/navigation";
 import { db } from "@/firebaseconfig";
 import { ref, push } from "firebase/database";
 
 export default function AddDoctorPage() {
-  const router = useRouter();
-
   // Form state for adding a doctor
   const [doctorName, setDoctorName] = useState("");
   const [doctorCharges, setDoctorCharges] = useState("");
@@ -39,8 +37,12 @@ export default function AddDoctorPage() {
       setDoctorType("");
       // For example, redirect to the OPD booking page:
       // router.push("/opd-booking");
-    } catch (err: any) {
-      alert("Error adding doctor: " + err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        alert("Error adding doctor: " + err.message);
+      } else {
+        alert("Error adding doctor");
+      }
     }
   };
 
