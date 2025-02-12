@@ -80,9 +80,10 @@ export default function OpdBookingPage() {
       {
         command: "gender *",
         callback: (val: string) => {
-          const trimmed = val.trim();
-          setGender(trimmed);
-          toast.info(`Gender set to: ${trimmed}`);
+          const normalized = val.trim().toLowerCase();
+          const genderValue = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+          setGender(genderValue);
+          toast.info(`Gender set to: ${genderValue}`);
         },
       },
       {
@@ -112,9 +113,17 @@ export default function OpdBookingPage() {
       {
         command: "payment *",
         callback: (val: string) => {
-          const trimmed = val.trim();
-          setPaymentMethod(trimmed);
-          toast.info(`Payment method set to: ${trimmed}`);
+          const trimmed = val.trim().toLowerCase();
+          if (trimmed === "online") {
+            setPaymentMethod("Online");
+            toast.info("Payment method set to: Online");
+          } else if (trimmed === "cash") {
+            setPaymentMethod("Cash");
+            toast.info("Payment method set to: Cash");
+          } else {
+            setPaymentMethod(trimmed);
+            toast.info(`Payment method set to: ${trimmed}`);
+          }
         },
       },
       {
@@ -123,6 +132,12 @@ export default function OpdBookingPage() {
           const trimmed = val.trim();
           setMessage(trimmed);
           toast.info("Message set.");
+        },
+      },
+      {
+        command: "submit",
+        callback: () => {
+          submitForm();
         },
       },
     ],
@@ -207,7 +222,6 @@ export default function OpdBookingPage() {
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setName(value);
-    // Reset selected user if typing manually
     setSelectedUserId(null);
     if (value.length >= 2) {
       const suggestions = existingUsers.filter((user) =>
@@ -230,10 +244,8 @@ export default function OpdBookingPage() {
     setUserSuggestions([]);
   };
 
-  // --- Handle Form Submission ---
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  // --- Submit Form Logic ---
+  const submitForm = async () => {
     if (
       !name ||
       !phone ||
@@ -326,6 +338,12 @@ export default function OpdBookingPage() {
     setUserSuggestions([]);
   };
 
+  // Form onSubmit handler
+  const handleSubmitWrapper = (e: React.FormEvent) => {
+    e.preventDefault();
+    submitForm();
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <ToastContainer />
@@ -355,7 +373,7 @@ export default function OpdBookingPage() {
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
           OPD Booking
         </h2>
-        <form onSubmit={handleSubmit} className="space-y-6 relative">
+        <form onSubmit={handleSubmitWrapper} className="space-y-6 relative">
           {/* Customer Name with Auto-Suggest */}
           <div className="relative">
             <label className="block text-sm font-medium text-gray-700">
