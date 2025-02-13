@@ -42,11 +42,12 @@ export default function OpdBookingPage() {
   const [userSuggestions, setUserSuggestions] = useState<UserData[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  // --- Voice Recognition Commands ---
+  // --- Voice Recognition Commands (using regex for case-insensitivity) ---
   const commands = useMemo(
     () => [
       {
-        command: "name *",
+        // Matches "name <anything>"
+        command: /^name (.*)/i,
         callback: (val: string) => {
           const trimmed = val.trim();
           setName(trimmed);
@@ -54,7 +55,8 @@ export default function OpdBookingPage() {
         },
       },
       {
-        command: "phone *",
+        // Matches "phone <anything>" and removes any non-digit characters
+        command: /^phone (.*)/i,
         callback: (val: string) => {
           const sanitized = val.replace(/\D/g, "").trim();
           setPhone(sanitized);
@@ -62,7 +64,8 @@ export default function OpdBookingPage() {
         },
       },
       {
-        command: "email *",
+        // Matches "email <anything>"
+        command: /^email (.*)/i,
         callback: (val: string) => {
           const trimmed = val.trim();
           setEmail(trimmed);
@@ -70,7 +73,8 @@ export default function OpdBookingPage() {
         },
       },
       {
-        command: "age *",
+        // Matches "age <anything>"
+        command: /^age (.*)/i,
         callback: (val: string) => {
           const trimmed = val.trim();
           setAge(trimmed);
@@ -78,7 +82,8 @@ export default function OpdBookingPage() {
         },
       },
       {
-        command: "gender *",
+        // Matches "gender <anything>"
+        command: /^gender (.*)/i,
         callback: (val: string) => {
           const normalized = val.trim().toLowerCase();
           const genderValue = normalized.charAt(0).toUpperCase() + normalized.slice(1);
@@ -87,7 +92,8 @@ export default function OpdBookingPage() {
         },
       },
       {
-        command: "doctor *",
+        // Matches "doctor <anything>" and finds a matching doctor from the list
+        command: /^doctor (.*)/i,
         callback: (val: string) => {
           const normalized = val.trim().toLowerCase();
           const doc = doctors.find((d) =>
@@ -103,7 +109,8 @@ export default function OpdBookingPage() {
         },
       },
       {
-        command: "amount *",
+        // Matches "amount <anything>"
+        command: /^amount (.*)/i,
         callback: (val: string) => {
           const trimmed = val.trim();
           setAmount(trimmed);
@@ -111,7 +118,8 @@ export default function OpdBookingPage() {
         },
       },
       {
-        command: "payment *",
+        // Matches "payment <anything>"
+        command: /^payment (.*)/i,
         callback: (val: string) => {
           const trimmed = val.trim().toLowerCase();
           if (trimmed === "online") {
@@ -127,7 +135,8 @@ export default function OpdBookingPage() {
         },
       },
       {
-        command: "message *",
+        // Matches "message <anything>"
+        command: /^message (.*)/i,
         callback: (val: string) => {
           const trimmed = val.trim();
           setMessage(trimmed);
@@ -135,7 +144,8 @@ export default function OpdBookingPage() {
         },
       },
       {
-        command: "submit",
+        // Matches "submit" exactly (case-insensitive)
+        command: /^submit$/i,
         callback: () => {
           submitForm();
         },
